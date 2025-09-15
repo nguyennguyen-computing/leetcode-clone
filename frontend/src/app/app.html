@@ -1,0 +1,79 @@
+<nz-layout class="min-h-screen bg-gray-50">
+  <nz-header class="bg-white shadow-lg border-b border-gray-200 px-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 flex items-center">
+            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+              <span class="text-white font-bold text-lg">LC</span>
+            </div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {{ title() }}
+            </h1>
+          </div>
+          <nav *ngIf="isAuthenticated$ | async" class="ml-10">
+            <div class="flex space-x-8">
+              <a routerLink="/problems" 
+                 routerLinkActive="text-blue-600 border-blue-600" 
+                 class="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200">
+                Problems
+              </a>
+              <a href="#" class="text-gray-400 px-3 py-2 text-sm font-medium border-b-2 border-transparent cursor-not-allowed">
+                Contests
+              </a>
+              <a href="#" class="text-gray-400 px-3 py-2 text-sm font-medium border-b-2 border-transparent cursor-not-allowed">
+                Discuss
+              </a>
+            </div>
+          </nav>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+          <ng-container *ngIf="isAuthenticated$ | async; else authButtons">
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-2 bg-gray-100 rounded-full px-4 py-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                  <span class="text-white text-sm font-semibold">
+                    {{ (currentUser$ | async)?.username?.charAt(0)?.toUpperCase() }}
+                  </span>
+                </div>
+                <span class="text-gray-700 font-medium">{{ (currentUser$ | async)?.username }}</span>
+              </div>
+              <button nz-button 
+                      nzType="default" 
+                      nzSize="small"
+                      class="border-gray-300 hover:border-red-400 hover:text-red-500 transition-colors"
+                      (click)="logout()">
+                <i nz-icon nzType="logout" class="mr-1"></i>
+                Logout
+              </button>
+            </div>
+          </ng-container>
+          
+          <ng-template #authButtons>
+            <div class="flex items-center space-x-3">
+              <a routerLink="/login" 
+                 nz-button 
+                 nzType="default" 
+                 nzSize="large"
+                 class="border-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors">
+                Sign In
+              </a>
+              <a routerLink="/register" 
+                 nz-button 
+                 nzType="primary" 
+                 nzSize="large"
+                 class="bg-gradient-to-r from-blue-500 to-purple-600 border-0 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200">
+                Get Started
+              </a>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </nz-header>
+  
+  <nz-content class="flex-1">
+    <router-outlet />
+  </nz-content>
+</nz-layout>

@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
+
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm start -- --host 0.0.0.0"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=leetcode_clone
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - JWT_SECRET=your-secret-key-change-in-production
+      - GIN_MODE=release
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend-dev:
+    image: golang:1.23-alpine
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=leetcode_clone
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - JWT_SECRET=your-secret-key-change-in-production
+      - GIN_MODE=debug
+    volumes:
+      - ./backend:/app
+    command: sh -c "go mod download && go run main.go"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=leetcode_clone
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  execution-env:
+    image: ubuntu:22.04
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+    command: tail -f /dev/null
+
+volumes:
+  postgres_data:
