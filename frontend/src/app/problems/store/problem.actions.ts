@@ -101,3 +101,19 @@ export const submitCodeFailure = createAction(
 
 // Clear Execution Results
 export const clearExecutionResult = createAction('[Problem] Clear Execution Result');
+
+// Submission Actions
+export const loadSubmissions = createAction(
+  '[Problem] Load Submissions',
+  props<{ problemId?: number; page?: number; limit?: number }>()
+);
+
+export const loadSubmissionsSuccess = createAction(
+  '[Problem] Load Submissions Success',
+  props<{ submissions: any[]; total: number }>()
+);
+
+export const loadSubmissionsFailure = createAction(
+  '[Problem] Load Submissions Failure',
+  props<{ error: string }>()
+);

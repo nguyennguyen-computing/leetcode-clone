@@ -18,6 +18,10 @@ export interface ProblemState {
   isSubmitting: boolean;
   executionResult: CodeExecutionResult | null;
   executionError: string | null;
+  // Submission state
+  submissions: any[];
+  submissionsLoading: boolean;
+  submissionsTotal: number;
 }
 
 const initialFilters: ProblemFilters = {
@@ -41,7 +45,11 @@ export const initialState: ProblemState = {
   isRunning: false,
   isSubmitting: false,
   executionResult: null,
-  executionError: null
+  executionError: null,
+  // Submission state
+  submissions: [],
+  submissionsLoading: false,
+  submissionsTotal: 0
 };
 
 export const problemReducer = createReducer(
@@ -174,5 +182,24 @@ export const problemReducer = createReducer(
     ...state,
     executionResult: null,
     executionError: null
+  })),
+
+  // Submissions
+  on(ProblemActions.loadSubmissions, (state) => ({
+    ...state,
+    submissionsLoading: true
+  })),
+
+  on(ProblemActions.loadSubmissionsSuccess, (state, { submissions, total }) => ({
+    ...state,
+    submissionsLoading: false,
+    submissions,
+    submissionsTotal: total
+  })),
+
+  on(ProblemActions.loadSubmissionsFailure, (state, { error }) => ({
+    ...state,
+    submissionsLoading: false,
+    error
   }))
 );

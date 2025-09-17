@@ -14,9 +14,13 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzTypographyModule } from 'ng-zorro-antd/typography';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageService } from 'ng-zorro-antd/message';
 
-import { CodeEditorComponent, CodeSubmission } from '../code-editor/code-editor.component';
+import { CodeEditorComponent, CodeSubmission, CodeExecutionResult } from '../code-editor/code-editor.component';
+import { SubmissionHistoryComponent } from '../submission-history/submission-history.component';
+import { PerformanceMetricsComponent } from '../performance-metrics/performance-metrics.component';
+import { SubmissionErrorComponent } from '../submission-error/submission-error.component';
 import { 
   selectSelectedProblem, 
   selectProblemLoading, 
@@ -40,7 +44,11 @@ import { Problem } from '../../models/problem.models';
     NzSpinModule,
     NzAlertModule,
     NzTypographyModule,
-    CodeEditorComponent
+    NzTabsModule,
+    CodeEditorComponent,
+    SubmissionHistoryComponent,
+    PerformanceMetricsComponent,
+    SubmissionErrorComponent
   ],
   template: `
     <div class="min-h-screen bg-gray-50">
@@ -182,15 +190,96 @@ import { Problem } from '../../models/problem.models';
           </div>
         </div>
 
-        <!-- Code Editor Panel -->
-        <div [class]="showDescription ? 'w-1/2' : 'w-full'">
-          <app-code-editor
-            #codeEditor
-            [problem]="problem"
-            (codeRun)="onCodeRun($event)"
-            (codeSubmit)="onCodeSubmit($event)"
-            class="h-full block">
-          </app-code-editor>
+        <!-- Code Editor and Results Panel -->
+        <div [class]="showDescription ? 'w-1/2' : 'w-full'" class="flex flex-col">
+          <!-- Code Editor -->
+          <div class="flex-1">
+            <app-code-editor
+              #codeEditor
+              [problem]="problem"
+              (codeRun)="onCodeRun($event)"
+              (codeSubmit)="onCodeSubmit($event)"
+              class="h-full block">
+            </app-code-editor>
+          </div>
+
+          <!-- Results and Submission Interface -->
+          <div class="h-1/3 bg-white border-t border-gray-200 overflow-hidden">
+            <nz-tabset nzSize="small" class="h-full">
+              <!-- Real-time Results Tab -->
+              <nz-tab nzTitle="Results">
+                <div class="p-4 h-full overflow-y-auto">
+                  <!-- Show execution results or errors -->
+                  <div *ngIf="lastExecutionResult">
+                    <div *ngIf="lastExecutionResult.success; else errorTemplate">
+                      <!-- Success Result -->
+                      <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-2">
+                          <i nz-icon nzType="check-circle" nzTheme="fill" class="text-green-500 mr-2"></i>
+                          <span class="font-medium text-green-800">Success!</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 text-sm">
+                          <div *ngIf="lastExecutionResult.runtime">
+                            <span class="text-gray-600">Runtime:</span>
+                            <span class="font-medium ml-1">{{ lastExecutionResult.runtime }}ms</span>
+                          </div>
+                          <div *ngIf="lastExecutionResult.memory">
+                            <span class="text-gray-600">Memory:</span>
+                            <span class="font-medium ml-1">{{ lastExecutionResult.memory }}KB</span>
+                          </div>
+                          <div *ngIf="lastExecutionResult.testCasesPassed !== undefined">
+                            <span class="text-gray-600">Test Cases:</span>
+                            <span class="font-medium ml-1">{{ lastExecutionResult.testCasesPassed }}/{{ lastExecutionResult.totalTestCases }}</span>
+                          </div>
+                        </div>
+                        
+                        <div *ngIf="lastExecutionResult.output" class="mt-3">
+                          <div class="text-sm text-gray-600 mb-1">Output:</div>
+                          <pre class="bg-white p-2 rounded border text-xs font-mono">{{ lastExecutionResult.output }}</pre>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <ng-template #errorTemplate>
+                      <!-- Error Result -->
+                      <app-submission-error
+                        [status]="getSubmissionStatus(lastExecutionResult)"
+                        [errorMessage]="lastExecutionResult.error"
+                        [testCasesPassed]="lastExecutionResult.testCasesPassed || 0"
+                        [totalTestCases]="lastExecutionResult.totalTestCases || 0">
+                      </app-submission-error>
+                    </ng-template>
+                  </div>
+                  
+                  <!-- No results yet -->
+                  <div *ngIf="!lastExecutionResult" class="text-center text-gray-500 py-8">
+                    <i nz-icon nzType="play-circle" nzTheme="outline" class="text-2xl mb-2"></i>
+                    <p>Run your code to see results here</p>
+                  </div>
+                </div>
+              </nz-tab>
+
+              <!-- Submission History Tab -->
+              <nz-tab nzTitle="Submissions">
+                <div class="h-full overflow-hidden">
+                  <app-submission-history 
+                    [problemId]="(problem$ | async)?.id"
+                    class="h-full block">
+                  </app-submission-history>
+                </div>
+              </nz-tab>
+
+              <!-- Performance Metrics Tab -->
+              <nz-tab nzTitle="Analytics">
+                <div class="p-4 h-full overflow-y-auto">
+                  <app-performance-metrics 
+                    [problemId]="(problem$ | async)?.id">
+                  </app-performance-metrics>
+                </div>
+              </nz-tab>
+            </nz-tabset>
+          </div>
         </div>
       </div>
     </div>
@@ -224,6 +313,7 @@ export class ProblemSolveComponent implements OnInit, OnDestroy {
   executionState$ = this.store.select(selectExecutionState);
 
   showDescription = true;
+  lastExecutionResult: CodeExecutionResult | null = null;
 
   ngOnInit() {
     // Load problem based on route params
@@ -243,7 +333,13 @@ export class ProblemSolveComponent implements OnInit, OnDestroy {
     ).subscribe(state => {
       if (this.codeEditor) {
         if (state.result) {
+          this.lastExecutionResult = state.result;
           this.codeEditor.setExecutionResult(state.result);
+          
+          // Show success message for accepted submissions
+          if (state.result.success && state.result.testCasesPassed === state.result.totalTestCases) {
+            this.message.success('Solution accepted! 🎉');
+          }
         }
         
         if (state.error) {
@@ -301,5 +397,24 @@ export class ProblemSolveComponent implements OnInit, OnDestroy {
       .filter(line => line.trim())
       .map(line => `<li class="text-sm text-gray-700">${line.trim()}</li>`)
       .join('');
+  }
+
+  getSubmissionStatus(result: CodeExecutionResult): 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded' | 'Memory Limit Exceeded' | 'Compilation Error' | 'Internal Error' {
+    if (!result.success) {
+      if (result.error) {
+        if (result.error.includes('timeout') || result.error.includes('time limit')) {
+          return 'Time Limit Exceeded';
+        }
+        if (result.error.includes('memory') || result.error.includes('out of memory')) {
+          return 'Memory Limit Exceeded';
+        }
+        if (result.error.includes('compilation') || result.error.includes('syntax')) {
+          return 'Compilation Error';
+        }
+        return 'Runtime Error';
+      }
+      return 'Wrong Answer';
+    }
+    return 'Accepted';
   }
 }

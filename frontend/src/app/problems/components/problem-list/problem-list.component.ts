@@ -27,7 +27,6 @@ import {
   selectProblemPagination
 } from '../../store/problem.selectors';
 import * as ProblemActions from '../../store/problem.actions';
-import { ProblemFilterComponent } from '../problem-filter/problem-filter.component';
 import { Problem } from '../../models/problem.models';
 
 
@@ -49,7 +48,6 @@ import { Problem } from '../../models/problem.models';
     NzInputModule,
     NzSelectModule,
     NzLayoutModule,
-    ProblemFilterComponent
   ],
   template: `
     <div class="min-h-screen bg-gray-50">

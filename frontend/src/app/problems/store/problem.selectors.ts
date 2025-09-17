@@ -144,3 +144,18 @@ export const selectExecutionState = createSelector(
     error: state.executionError
   })
 );
+
+export const selectSubmissions = createSelector(
+  selectProblemState,
+  (state) => state.submissions
+);
+
+export const selectSubmissionsLoading = createSelector(
+  selectProblemState,
+  (state) => state.submissionsLoading
+);
+
+export const selectSubmissionsTotal = createSelector(
+  selectProblemState,
+  (state) => state.submissionsTotal
+);
